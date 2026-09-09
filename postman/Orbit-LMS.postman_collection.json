@@ -1,0 +1,438 @@
+{
+  "info": {
+    "name": "Orbit LMS API",
+    "description": "Backend API for Orbit LMS. Import this alongside the 'Orbit LMS — Local' environment. Run 'Login (Admin)' or 'Login (Intern)' first — it auto-saves the token to {{token}} for every other request.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health check",
+          "request": { "method": "GET", "url": "{{baseUrl}}/health" }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"New\",\n  \"lastName\": \"Intern\",\n  \"email\": \"new.intern@orbit.com\",\n  \"password\": \"password123\",\n  \"department\": \"Engineering\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.environment.set('token', body.data.token);",
+                  "pm.environment.set('userId', body.data.user.id);",
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"mentor@orbit.com\",\n  \"password\": \"password123\"\n}" }
+          }
+        },
+        {
+          "name": "Login (Intern)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.environment.set('token', body.data.token);",
+                  "pm.environment.set('userId', body.data.user.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"jane.smith@orbit.com\",\n  \"password\": \"password123\"\n}" }
+          }
+        },
+        {
+          "name": "Get current user (me)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "List users (ADMIN)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/users",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Get user by id",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/users/{{userId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Update user",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/users/{{userId}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"department\": \"Product & Design\"\n}" }
+          }
+        },
+        {
+          "name": "Get user progress",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/users/{{userId}}/progress",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Get user enrollments",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/users/{{userId}}/enrollments",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Delete user (ADMIN)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/users/{{userId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Courses",
+      "item": [
+        {
+          "name": "List courses (public)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/courses" }
+        },
+        {
+          "name": "Create course (ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "exec": ["const body = pm.response.json();", "if (body.data) pm.environment.set('courseId', body.data.id);"] }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/courses",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Security & Data Privacy Basics\",\n  \"category\": \"Security\",\n  \"description\": \"Covers the essentials of data privacy and account security.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get course by id",
+          "request": { "method": "GET", "url": "{{baseUrl}}/courses/{{courseId}}" }
+        },
+        {
+          "name": "Update course (ADMIN)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/courses/{{courseId}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"description\": \"Updated description.\"\n}" }
+          }
+        },
+        {
+          "name": "Delete course (ADMIN)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/courses/{{courseId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Modules",
+      "item": [
+        {
+          "name": "List modules for a course",
+          "request": { "method": "GET", "url": "{{baseUrl}}/courses/{{courseId}}/modules" }
+        },
+        {
+          "name": "Create module (ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "exec": ["const body = pm.response.json();", "if (body.data) pm.environment.set('moduleId', body.data.id);"] }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/courses/{{courseId}}/modules",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Intro to Data Privacy\",\n  \"order\": 0,\n  \"published\": true\n}" }
+          }
+        },
+        {
+          "name": "Get module by id",
+          "request": { "method": "GET", "url": "{{baseUrl}}/modules/{{moduleId}}" }
+        },
+        {
+          "name": "Update module (ADMIN)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/modules/{{moduleId}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"published\": false\n}" }
+          }
+        },
+        {
+          "name": "Delete module (ADMIN)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/modules/{{moduleId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Materials",
+      "item": [
+        {
+          "name": "List materials for a module",
+          "request": { "method": "GET", "url": "{{baseUrl}}/modules/{{moduleId}}/materials" }
+        },
+        {
+          "name": "Create material (ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "exec": ["const body = pm.response.json();", "if (body.data) pm.environment.set('materialId', body.data.id);"] }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/modules/{{moduleId}}/materials",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Password Hygiene Basics\",\n  \"type\": \"DOCUMENT\",\n  \"url\": \"/uploads/password-hygiene.pdf\",\n  \"order\": 0\n}"
+            }
+          }
+        },
+        {
+          "name": "Get material by id",
+          "request": { "method": "GET", "url": "{{baseUrl}}/materials/{{materialId}}" }
+        },
+        {
+          "name": "Update material (ADMIN)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/materials/{{materialId}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Password Hygiene Basics (Updated)\"\n}" }
+          }
+        },
+        {
+          "name": "Mark material complete (self)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/materials/{{materialId}}/complete",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Delete material (ADMIN)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/materials/{{materialId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Quizzes & Questions",
+      "item": [
+        {
+          "name": "Get quiz for a module",
+          "request": { "method": "GET", "url": "{{baseUrl}}/modules/{{moduleId}}/quiz" }
+        },
+        {
+          "name": "Create quiz (ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "exec": ["const body = pm.response.json();", "if (body.data) pm.environment.set('quizId', body.data.id);"] }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/modules/{{moduleId}}/quiz",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Mini Quiz: Data Privacy\"\n}" }
+          }
+        },
+        {
+          "name": "Update quiz (ADMIN)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/quizzes/{{quizId}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Mini Quiz: Data Privacy (Updated)\"\n}" }
+          }
+        },
+        {
+          "name": "Create question (ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "exec": ["const body = pm.response.json();", "if (body.data) pm.environment.set('questionId', body.data.id);"] }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/quizzes/{{quizId}}/questions",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"What should you never share with anyone?\",\n  \"options\": [\n    { \"text\": \"Your password\", \"isCorrect\": true },\n    { \"text\": \"Your job title\", \"isCorrect\": false },\n    { \"text\": \"Your team name\", \"isCorrect\": false }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Update question (ADMIN)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/questions/{{questionId}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"text\": \"What should you never share with a coworker?\"\n}" }
+          }
+        },
+        {
+          "name": "Submit quiz attempt (self)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/quizzes/{{quizId}}/attempt",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    { \"questionId\": \"{{questionId}}\", \"optionId\": \"REPLACE_WITH_AN_OPTION_ID\" }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete question (ADMIN)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/questions/{{questionId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Delete quiz (ADMIN)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/quizzes/{{quizId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Enrollments",
+      "item": [
+        {
+          "name": "Create enrollment (ADMIN)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/enrollments",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"courseId\": \"{{courseId}}\"\n}" }
+          }
+        },
+        {
+          "name": "Delete enrollment (ADMIN)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/enrollments/REPLACE_WITH_ENROLLMENT_ID",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        }
+      ]
+    }
+  ]
+}

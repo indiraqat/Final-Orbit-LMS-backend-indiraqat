@@ -1,0 +1,171 @@
+// Orbit LMS — Prisma schema
+// Covers users (two roles), courses, modules, materials (docs/videos),
+// mini quizzes with questions/options, enrollments, and per-item progress.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN   // mentor/admin — creates/updates/deletes modules, views team roster
+  INTERN  // user — learns materials, takes quizzes
+}
+
+enum MaterialType {
+  DOCUMENT
+  VIDEO_UPLOAD
+  VIDEO_LINK
+}
+
+model User {
+  id           String   @id @default(uuid())
+  firstName    String
+  lastName     String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(INTERN)
+  department   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  enrollments         Enrollment[]
+  materialCompletions MaterialCompletion[]
+  quizAttempts        QuizAttempt[]
+
+  @@map("users")
+}
+
+model Course {
+  id          String   @id @default(uuid())
+  title       String
+  category    String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  modules     Module[]
+  enrollments Enrollment[]
+
+  @@map("courses")
+}
+
+model Module {
+  id        String   @id @default(uuid())
+  courseId  String
+  title     String
+  order     Int      @default(0)
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  materials Material[]
+  quiz      Quiz?
+
+  @@index([courseId])
+  @@map("modules")
+}
+
+model Material {
+  id        String       @id @default(uuid())
+  moduleId  String
+  title     String
+  type      MaterialType
+  url       String? // file path (uploaded doc/video) or external video link
+  order     Int          @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  module      Module               @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  completions MaterialCompletion[]
+
+  @@index([moduleId])
+  @@map("materials")
+}
+
+model MaterialCompletion {
+  id          String   @id @default(uuid())
+  userId      String
+  materialId  String
+  completedAt DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  material Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, materialId])
+  @@map("material_completions")
+}
+
+model Quiz {
+  id       String @id @default(uuid())
+  moduleId String @unique
+  title    String
+
+  module    Module         @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+
+  @@map("quizzes")
+}
+
+model QuizQuestion {
+  id     String @id @default(uuid())
+  quizId String
+  text   String
+  order  Int    @default(0)
+
+  quiz    Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  options QuizOption[]
+
+  @@index([quizId])
+  @@map("quiz_questions")
+}
+
+model QuizOption {
+  id         String  @id @default(uuid())
+  questionId String
+  text       String
+  isCorrect  Boolean @default(false)
+  order      Int     @default(0)
+
+  question QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+  @@map("quiz_options")
+}
+
+model QuizAttempt {
+  id             String   @id @default(uuid())
+  userId         String
+  quizId         String
+  score          Int // number correct
+  totalQuestions Int
+  passed         Boolean
+  completedAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([quizId])
+  @@map("quiz_attempts")
+}
+
+model Enrollment {
+  id         String   @id @default(uuid())
+  userId     String
+  courseId   String
+  enrolledAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
