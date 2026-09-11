@@ -71,8 +71,11 @@ async function submitQuizAttempt(req, res) {
 }
 
 // GET /api/users/:userId/progress
-// Per-course item breakdown: materials + quiz each count as one item,
-// matching the "X / Y items · Z%" tracking model used on the frontend.
+// Per-course, per-module breakdown: materials + quiz each count as one item
+// toward that module's percent, matching the "X / Y items · Z%" tracking
+// model used on the frontend. Also includes enough detail (material
+// completion flags, quiz attempt status) for course-detail and quizzes
+// pages to render real state without extra round trips.
 async function getUserProgress(req, res) {
   if (req.user.role !== 'ADMIN' && req.user.id !== req.params.userId) {
     throw new ApiError(403, 'You can only view your own progress.');
@@ -84,32 +87,68 @@ async function getUserProgress(req, res) {
       course: {
         include: {
           modules: {
-            include: { materials: true, quiz: true },
+            orderBy: { order: 'asc' },
+            include: {
+              materials: { orderBy: { order: 'asc' } },
+              quiz: { include: { _count: { select: { questions: true } } } },
+            },
           },
         },
       },
     },
   });
 
-  const [completedMaterialIds, passedQuizIds] = await Promise.all([
+  const [completedMaterialIds, attemptsByQuizId] = await Promise.all([
     prisma.materialCompletion
       .findMany({ where: { userId: req.params.userId }, select: { materialId: true } })
       .then((rows) => new Set(rows.map((r) => r.materialId))),
     prisma.quizAttempt
-      .findMany({ where: { userId: req.params.userId, passed: true }, select: { quizId: true } })
-      .then((rows) => new Set(rows.map((r) => r.quizId))),
+      .findMany({ where: { userId: req.params.userId }, orderBy: { completedAt: 'desc' } })
+      .then((rows) => {
+        const map = new Map();
+        // rows are newest-first, so the first one seen per quizId is the latest attempt
+        for (const row of rows) {
+          if (!map.has(row.quizId)) map.set(row.quizId, row);
+        }
+        return map;
+      }),
   ]);
 
   const courses = enrollments.map(({ course }) => {
     const modules = course.modules.map((module) => {
-      const totalItems = module.materials.length + (module.quiz ? 1 : 0);
+      const materials = module.materials.map((m) => ({
+        id: m.id,
+        title: m.title,
+        type: m.type,
+        url: m.url,
+        completed: completedMaterialIds.has(m.id),
+      }));
+
+      const latestAttempt = module.quiz ? attemptsByQuizId.get(module.quiz.id) : null;
+      const quiz = module.quiz
+        ? {
+            id: module.quiz.id,
+            title: module.quiz.title,
+            totalQuestions: module.quiz._count.questions,
+            attempted: Boolean(latestAttempt),
+            passed: latestAttempt?.passed || false,
+            score: latestAttempt?.score ?? null,
+            percent: latestAttempt
+              ? Math.round((latestAttempt.score / latestAttempt.totalQuestions) * 100)
+              : null,
+          }
+        : null;
+
+      const totalItems = materials.length + (quiz ? 1 : 0);
       const completedItems =
-        module.materials.filter((m) => completedMaterialIds.has(m.id)).length +
-        (module.quiz && passedQuizIds.has(module.quiz.id) ? 1 : 0);
+        materials.filter((m) => m.completed).length + (quiz && quiz.passed ? 1 : 0);
 
       return {
         id: module.id,
         title: module.title,
+        published: module.published,
+        materials,
+        quiz,
         totalItems,
         completedItems,
         percent: totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0,

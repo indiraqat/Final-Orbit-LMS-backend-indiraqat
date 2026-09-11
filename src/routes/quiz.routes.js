@@ -11,6 +11,7 @@ const quizUpdateSchema = { title: { required: false, type: 'string', minLength: 
 const questionSchema = { text: { required: true, type: 'string', minLength: 1, maxLength: 1000 } };
 const attemptSchema = {}; // "answers" array shape is checked in the controller (needs custom shape validation)
 
+router.get('/:id', requireAuth, asyncHandler(quizController.getQuizById));
 router.put('/:id', requireAuth, requireRole('ADMIN'), validateBody(quizUpdateSchema), asyncHandler(quizController.updateQuiz));
 router.delete('/:id', requireAuth, requireRole('ADMIN'), asyncHandler(quizController.deleteQuiz));
 

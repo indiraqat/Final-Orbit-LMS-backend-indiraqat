@@ -28,6 +28,18 @@ async function getQuizByModule(req, res) {
   res.json({ data: serializeQuiz(quiz, req.user?.role) });
 }
 
+// GET /api/quizzes/:id
+async function getQuizById(req, res) {
+  const quiz = await prisma.quiz.findUnique({
+    where: { id: req.params.id },
+    include: { questions: { orderBy: { order: 'asc' }, include: { options: { orderBy: { order: 'asc' } } } } },
+  });
+
+  if (!quiz) throw new ApiError(404, 'Quiz not found.');
+
+  res.json({ data: serializeQuiz(quiz, req.user?.role) });
+}
+
 // POST /api/modules/:moduleId/quiz  (ADMIN only)
 async function createQuiz(req, res) {
   const { title } = req.body;
@@ -152,6 +164,7 @@ async function deleteQuestion(req, res) {
 
 module.exports = {
   getQuizByModule,
+  getQuizById,
   createQuiz,
   updateQuiz,
   deleteQuiz,
