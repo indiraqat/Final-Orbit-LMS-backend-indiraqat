@@ -1,7 +1,7 @@
 const express = require('express');
 const asyncHandler = require('../middleware/asyncHandler');
 const { validateBody } = require('../middleware/validate');
-const { requireAuth, requireRole } = require('../middleware/auth');
+const { requireAuth, requireRole, optionalAuth } = require('../middleware/auth');
 const moduleController = require('../controllers/module.controller');
 const materialController = require('../controllers/material.controller');
 const quizController = require('../controllers/quiz.controller');
@@ -23,9 +23,9 @@ const quizSchema = {
 };
 
 // Public reads
-router.get('/:id', asyncHandler(moduleController.getModule));
+router.get('/:id', optionalAuth, asyncHandler(moduleController.getModule));
 router.get('/:moduleId/materials', asyncHandler(materialController.listMaterials));
-router.get('/:moduleId/quiz', asyncHandler(quizController.getQuizByModule));
+router.get('/:moduleId/quiz', optionalAuth, asyncHandler(quizController.getQuizByModule));
 
 // Writes — ADMIN only
 router.put('/:id', requireAuth, requireRole('ADMIN'), validateBody(moduleUpdateSchema), asyncHandler(moduleController.updateModule));

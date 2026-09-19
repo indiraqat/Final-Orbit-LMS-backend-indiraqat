@@ -1,7 +1,7 @@
 const express = require('express');
 const asyncHandler = require('../middleware/asyncHandler');
 const { validateBody } = require('../middleware/validate');
-const { requireAuth, requireRole } = require('../middleware/auth');
+const { requireAuth, requireRole, optionalAuth } = require('../middleware/auth');
 const courseController = require('../controllers/course.controller');
 const moduleController = require('../controllers/module.controller');
 
@@ -20,7 +20,7 @@ const moduleSchema = {
 
 // Public reads
 router.get('/', asyncHandler(courseController.listCourses));
-router.get('/:id', asyncHandler(courseController.getCourse));
+router.get('/:id', optionalAuth, asyncHandler(courseController.getCourse));
 router.get('/:courseId/modules', asyncHandler(moduleController.listModules));
 
 // Writes — ADMIN only

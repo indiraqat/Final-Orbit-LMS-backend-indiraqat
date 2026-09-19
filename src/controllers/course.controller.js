@@ -1,5 +1,6 @@
 const prisma = require('../config/db');
 const { ApiError } = require('../middleware/errorHandler');
+const { serializeQuiz } = require('../utils/serializeQuiz');
 
 // GET /api/courses  (public — the course catalog)
 async function listCourses(req, res) {
@@ -23,7 +24,7 @@ async function listCourses(req, res) {
   });
 }
 
-// GET /api/courses/:id
+// GET /api/courses/:id  (public — quiz answers are only included for admins)
 async function getCourse(req, res) {
   const course = await prisma.course.findUnique({
     where: { id: req.params.id },
@@ -40,7 +41,12 @@ async function getCourse(req, res) {
 
   if (!course) throw new ApiError(404, 'Course not found.');
 
-  res.json({ data: course });
+  res.json({
+    data: {
+      ...course,
+      modules: course.modules.map((m) => ({ ...m, quiz: serializeQuiz(m.quiz, req.user?.role) })),
+    },
+  });
 }
 
 // POST /api/courses  (ADMIN only)

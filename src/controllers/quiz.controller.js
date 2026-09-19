@@ -1,20 +1,6 @@
 const prisma = require('../config/db');
 const { ApiError } = require('../middleware/errorHandler');
-
-// Strip isCorrect from options unless the caller is an admin — an intern
-// taking the quiz should never receive the answer key in the response.
-function serializeQuiz(quiz, viewerRole) {
-  if (!quiz) return quiz;
-  return {
-    ...quiz,
-    questions: quiz.questions.map((q) => ({
-      ...q,
-      options: q.options.map((o) =>
-        viewerRole === 'ADMIN' ? o : { id: o.id, text: o.text, order: o.order }
-      ),
-    })),
-  };
-}
+const { serializeQuiz } = require('../utils/serializeQuiz');
 
 // GET /api/modules/:moduleId/quiz
 async function getQuizByModule(req, res) {

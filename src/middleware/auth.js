@@ -38,6 +38,34 @@ async function requireAuth(req, res, next) {
 }
 
 /**
+ * Like requireAuth, but never rejects the request. If a valid Bearer token
+ * is present, req.user is populated exactly as requireAuth would populate
+ * it. If the header is missing, or the token is invalid/expired/belongs to
+ * a deleted user, the request simply continues as an anonymous visitor
+ * (req.user stays unset). Genuine failures (e.g. the database is down)
+ * are still passed on to the error handler.
+ *
+ * Use on public routes whose response depends on who is asking — e.g. quiz
+ * answers are only included for admins.
+ *
+ * Usage: router.get('/:id', optionalAuth, asyncHandler(getModule))
+ */
+function optionalAuth(req, res, next) {
+  requireAuth(req, res, (err) => {
+    if (!err) return next();
+
+    const isAuthFailure =
+      (err instanceof ApiError && err.statusCode === 401) ||
+      err.name === 'JsonWebTokenError' ||
+      err.name === 'TokenExpiredError' ||
+      err.name === 'NotBeforeError';
+
+    if (isAuthFailure) return next();
+    next(err);
+  });
+}
+
+/**
  * Restricts a route to one or more roles. Must run after requireAuth
  * has populated req.user.
  *
@@ -53,4 +81,4 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { requireAuth, requireRole };
+module.exports = { requireAuth, requireRole, optionalAuth };
