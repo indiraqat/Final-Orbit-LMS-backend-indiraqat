@@ -7,36 +7,38 @@ Backend API for the Orbit LMS coursework project. Built with **Express**,
 
 ```
 orbit-lms-backend/
-├── prisma/
-│   ├── schema.prisma        # database schema (source of truth)
-│   ├── migrations/          # committed SQL migrations (applied by `prisma migrate`)
-│   └── seed.js              # mock data for frontend integration
 ├── postman/
 │   ├── Orbit-LMS.postman_collection.json
 │   └── Orbit-LMS.postman_environment.json
-├── tests/
-│   ├── auth.test.js         # integration tests — auth flow
-│   └── courses.test.js      # integration tests — CRUD + route protection
+├── prisma/
+│   ├── migrations/          # committed SQL migrations (applied by `prisma migrate`)
+│   ├── schema.prisma        # database schema (source of truth)
+│   └── seed.js              # mock data for frontend integration
 ├── src/
 │   ├── config/db.js         # Prisma client singleton
 │   ├── controllers/         # request handlers (business logic)
 │   ├── middleware/
 │   │   ├── asyncHandler.js  # wraps async routes so errors reach errorHandler
-│   │   ├── errorHandler.js  # central error handling incl. Prisma error mapping
 │   │   ├── auth.js          # requireAuth (JWT) + optionalAuth + requireRole (route protection)
+│   │   ├── errorHandle.js   # central error handling incl. Prisma error mapping
 │   │   └── validate.js      # validateBody(schema) request validation
+│   ├── routes/              # one router per resource, mounted under /api
 │   ├── utils/
 │   │   ├── jwt.js           # sign/verify JWTs
 │   │   ├── serializeQuiz.js # hides quiz answer flags (isCorrect) from non-admins
 │   │   └── validators.js    # small schema-based validator (no external lib)
-│   ├── routes/               # one router per resource, mounted under /api
-│   ├── app.js                # Express app (middleware + routes)
-│   └── server.js             # entry point
-├── railway.json               # Railway deployment config
-├── render.yaml                # Render.com deployment blueprint
-├── Procfile                   # generic process declaration (Heroku/Render)
+│   ├── app.js               # Express app (middleware + routes)
+│   └── server.js            # entry point
+├── tests/
+│   ├── auth.test.js         # integration tests — auth flow
+│   └── courses.test.js      # integration tests — CRUD + route protection
 ├── .env.example
-└── package.json
+├── package-lock.json
+├── package.json               
+├── Procfile  
+├── railway.json             # Railway deployment config 
+├── README.md
+└── render.yaml              # Render.com deployment blueprint
 ```
 
 Routes define URLs and protection rules → controllers hold the logic →
@@ -415,20 +417,3 @@ updated automatically on each deploy.
 5. Your API is now live at `https://<your-service-name>.onrender.com/api`.
 
 The same setup adapts easily to Fly.io or Heroku (see the `Procfile`).
-
-## Known limitations & next steps
-
-Known limitations:
-- **`CLIENT_ORIGIN` allows a single origin.** Vercel's preview deployments
-  (one URL per branch/PR) are different origins, so they can't call the API
-  unless `CLIENT_ORIGIN` is set to that URL — and a production URL and a
-  custom domain can't both be allowed at once.
-
-Natural next steps:
-- File upload handling for materials (currently a `url` string field —
-  wiring up real uploads, e.g. via `multer` + cloud storage, is the next
-  step for the "upload reading materials/videos" feature on the frontend)
-- Pagination/filtering on list endpoints
-- Rate limiting on `/auth/login` to slow down brute-force attempts
-- Refresh tokens (current JWTs are long-lived and can't be revoked before
-  they expire)
